@@ -9,10 +9,10 @@ import { useTranslation } from 'react-i18next'
 import Button from '@/app/components/base/button'
 import StreamdownMarkdown from '@/app/components/base/streamdown-markdown'
 import Tooltip from '@/app/components/base/tooltip'
-import WorkflowProcess from '@/app/components/workflow/workflow-process'
 import { randomString } from '@/utils/string'
 import ImageGallery from '../../base/image-gallery'
 import LoadingAnim from '../loading-anim'
+import HumanInputForm from '../human-input'
 import s from '../style.module.css'
 import Thought from '../thought'
 
@@ -70,6 +70,7 @@ interface IAnswerProps {
   isResponding?: boolean
   allToolIcons?: Record<string, string | Emoji>
   suggestionClick?: (suggestion: string) => void
+  onHumanInputSubmit?: (itemId: string, actionId: string) => void
 }
 
 // The component needs to maintain its own state to control whether to display input component
@@ -80,9 +81,11 @@ const Answer: FC<IAnswerProps> = ({
   isResponding,
   allToolIcons,
   suggestionClick = () => { },
+  onHumanInputSubmit,
 }) => {
-  const { id, content, feedback, agent_thoughts, workflowProcess, suggestedQuestions = [] } = item
+  const { id, content, feedback, agent_thoughts, suggestedQuestions = [], humanInput } = item
   const isAgentMode = !!agent_thoughts && agent_thoughts.length > 0
+  const isWaitingHumanInput = !!humanInput && !humanInput.submitted
 
   const { t } = useTranslation()
 
@@ -124,6 +127,8 @@ const Answer: FC<IAnswerProps> = ({
    * @returns comp
    */
   const renderItemOperation = () => {
+    if (isWaitingHumanInput) { return null }
+
     const userOperation = () => {
       return feedback?.rating
         ? null
@@ -178,7 +183,7 @@ const Answer: FC<IAnswerProps> = ({
 
   return (
     <div key={id}>
-      <div className="flex items-start">
+      <div className="flex items-start gap-3">
         <div className={`${s.answerIcon} w-10 h-10 shrink-0`}>
           {isResponding
             && (
@@ -187,11 +192,15 @@ const Answer: FC<IAnswerProps> = ({
               </div>
             )}
         </div>
-        <div className={`${s.answerWrap} max-w-[calc(100%-3rem)]`}>
+        <div className={`${s.answerWrap} min-w-0 max-w-[calc(100%-3.5rem)]`}>
+          <div className="mb-1.5 text-xs font-medium tracking-wide text-gray-400">{t('app.chat.assistantName')}</div>
           <div className={`${s.answer} relative text-sm text-gray-900`}>
-            <div className={`ml-2 py-3 px-4 bg-gray-100 rounded-tr-2xl rounded-b-2xl ${workflowProcess && 'min-w-[480px]'}`}>
-              {workflowProcess && (
-                <WorkflowProcess data={workflowProcess} hideInfo />
+            <div className='py-3 px-4 bg-white border border-gray-100 rounded-2xl rounded-tl-md shadow-sm shadow-gray-200/60'>
+              {isWaitingHumanInput && (
+                <HumanInputForm
+                  data={humanInput}
+                  onSelect={actionId => onHumanInputSubmit?.(id, actionId)}
+                />
               )}
               {(isResponding && (isAgentMode ? (!content && (agent_thoughts || []).filter(item => !!item.thought || !!item.tool).length === 0) : !content))
                 ? (
@@ -217,9 +226,9 @@ const Answer: FC<IAnswerProps> = ({
               )}
             </div>
             <div className="absolute top-[-14px] right-[-14px] flex flex-row justify-end gap-1">
-              {!feedbackDisabled && !item.feedbackDisabled && renderItemOperation()}
+              {!feedbackDisabled && !isWaitingHumanInput && !item.feedbackDisabled && renderItemOperation()}
               {/* User feedback must be displayed */}
-              {!feedbackDisabled && renderFeedbackRating(feedback?.rating)}
+              {!feedbackDisabled && !isWaitingHumanInput && renderFeedbackRating(feedback?.rating)}
             </div>
           </div>
         </div>

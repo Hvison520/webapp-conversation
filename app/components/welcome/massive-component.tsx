@@ -4,18 +4,64 @@ import React from 'react'
 import cn from 'classnames'
 import { useTranslation } from 'react-i18next'
 import {
+  AcademicCapIcon,
+  ArrowRightIcon,
+  ChatBubbleLeftRightIcon,
+  DocumentTextIcon,
+  InformationCircleIcon,
+  MapIcon,
   PencilIcon,
-} from '@heroicons/react/24/solid'
+  RocketLaunchIcon,
+  SparklesIcon,
+} from '@heroicons/react/24/outline'
 import s from './style.module.css'
 import type { AppInfo } from '@/types/app'
-import Button from '@/app/components/base/button'
+
+const FEATURES = [
+  { icon: MapIcon, label: '职业方向梳理' },
+  { icon: DocumentTextIcon, label: '简历优化建议' },
+  { icon: AcademicCapIcon, label: '校招面试备战' },
+  { icon: RocketLaunchIcon, label: '转行路径规划' },
+]
 
 export const AppInfoComp: FC<{ siteInfo: AppInfo }> = ({ siteInfo }) => {
-  const { t } = useTranslation()
   return (
-    <div>
-      <div className='flex items-center py-2 text-xl font-medium text-gray-700 rounded-md'>👏 {t('app.common.welcome')} {siteInfo.title}</div>
-      <p className='text-sm text-gray-500'>{siteInfo.description}</p>
+    <div className='relative'>
+      <div className='pointer-events-none absolute -right-10 -top-12 h-40 w-40 rounded-full bg-gradient-to-br from-indigo-100 to-violet-100 opacity-70 blur-2xl' />
+      <div className='relative'>
+        <div className='flex items-start gap-4'>
+          <img
+            src='/logo.svg'
+            alt={siteInfo.title}
+            className='w-14 h-14 tablet:w-16 tablet:h-16 shrink-0 rounded-2xl shadow-lg shadow-indigo-200/70'
+          />
+          <div className='min-w-0'>
+            <div className='flex flex-wrap items-center gap-2'>
+              <h1 className='text-xl tablet:text-2xl font-bold tracking-tight text-gray-900'>{siteInfo.title}</h1>
+              <span className='inline-flex items-center gap-1 rounded-full bg-indigo-50 px-2.5 py-1 text-[11px] font-medium text-indigo-600'>
+                <SparklesIcon className='w-3.5 h-3.5' />
+                AI 职业导师
+              </span>
+            </div>
+            <p className='mt-2 text-sm leading-6 text-gray-500'>{siteInfo.description}</p>
+          </div>
+        </div>
+        <div className='mt-5 grid grid-cols-2 gap-2 tablet:grid-cols-4'>
+          {FEATURES.map(({ icon: Icon, label }) => (
+            <div
+              key={label}
+              className='flex items-center gap-2 rounded-xl border border-gray-100 bg-gray-50/80 px-3 py-2.5 text-xs font-medium text-gray-600'
+            >
+              <Icon className='w-4 h-4 shrink-0 text-indigo-500' />
+              <span className='truncate'>{label}</span>
+            </div>
+          ))}
+        </div>
+        <div className='mt-4 flex items-start gap-2 rounded-xl bg-indigo-50/70 px-3 py-2.5 text-xs leading-5 text-indigo-600'>
+          <InformationCircleIcon className='mt-0.5 w-4 h-4 shrink-0' />
+          <span>支持上传 PDF 简历，我会结合你的履历给出更贴合的定制建议。</span>
+        </div>
+      </div>
     </div>
   )
 }
@@ -43,16 +89,17 @@ export const ChatBtn: FC<{ onClick: () => void, className?: string }> = ({
 }) => {
   const { t } = useTranslation()
   return (
-    <Button
-      type='primary'
-      className={cn(className, `space-x-2 flex items-center ${s.customBtn}`)}
+    <div
+      className={cn(
+        className,
+        'inline-flex items-center justify-center gap-2 h-11 px-6 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-indigo-500 via-indigo-600 to-violet-600 shadow-lg shadow-indigo-200/80 cursor-pointer transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-indigo-200/90',
+      )}
       onClick={onClick}
     >
-      <svg width="20" height="21" viewBox="0 0 20 21" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path fillRule="evenodd" clipRule="evenodd" d="M18 10.5C18 14.366 14.418 17.5 10 17.5C8.58005 17.506 7.17955 17.1698 5.917 16.52L2 17.5L3.338 14.377C2.493 13.267 2 11.934 2 10.5C2 6.634 5.582 3.5 10 3.5C14.418 3.5 18 6.634 18 10.5ZM7 9.5H5V11.5H7V9.5ZM15 9.5H13V11.5H15V9.5ZM9 9.5H11V11.5H9V9.5Z" fill="white" />
-      </svg>
+      <ChatBubbleLeftRightIcon className='w-5 h-5' />
       {t('app.chat.startChat')}
-    </Button>
+      <ArrowRightIcon className='w-4 h-4' />
+    </div>
   )
 }
 
@@ -61,7 +108,7 @@ export const EditBtn = ({ className, onClick }: { className?: string, onClick: (
 
   return (
     <div
-      className={cn('px-2 flex space-x-1 items-center rounded-md  cursor-pointer', className)}
+      className={cn('px-2 py-1 flex space-x-1 items-center rounded-md cursor-pointer hover:bg-indigo-50', className)}
       onClick={onClick}
     >
       <PencilIcon className='w-3 h-3' />

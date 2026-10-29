@@ -1,41 +1,60 @@
 .answerIcon {
   position: relative;
-  background: url(./icons/robot.svg);
+  background: url(./icons/career-assistant.svg) center center no-repeat;
+  background-size: contain;
+  border-radius: 12px;
+  box-shadow: 0 8px 20px -8px rgba(79, 70, 229, 0.55);
 }
 
 .typeingIcon {
   position: absolute;
-  top: 0px;
-  left: 0px;
+  right: -4px;
+  bottom: -4px;
   display: flex;
   justify-content: center;
   align-items: center;
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   background: #FFFFFF;
-  box-shadow: 0px 1px 2px rgba(16, 24, 40, 0.05);
-  border-radius: 16px;
+  box-shadow: 0px 2px 6px rgba(16, 24, 40, 0.12);
+  border-radius: 999px;
 }
-
 
 .questionIcon {
-  background: url(./icons/default-avatar.jpg);
+  background: url(./icons/user-avatar.svg) center center no-repeat;
   background-size: contain;
   border-radius: 50%;
+  box-shadow: 0 8px 20px -8px rgba(249, 115, 22, 0.6);
 }
 
-.answer::before,
-.question::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  width: 8px;
-  height: 12px;
+.questionBubble :global(.streamdown-markdown),
+.questionBubble :global(.streamdown-markdown p),
+.questionBubble :global(.streamdown-markdown li),
+.questionBubble :global(.streamdown-markdown span),
+.questionBubble :global(.streamdown-markdown strong),
+.questionBubble :global(.streamdown-markdown h1),
+.questionBubble :global(.streamdown-markdown h2),
+.questionBubble :global(.streamdown-markdown h3),
+.questionBubble :global(.streamdown-markdown h4),
+.questionBubble :global(.streamdown-markdown h5),
+.questionBubble :global(.streamdown-markdown h6),
+.questionBubble :global(.streamdown-markdown td),
+.questionBubble :global(.streamdown-markdown th) {
+  color: #FFFFFF !important;
 }
 
-.answer::before {
-  left: 0;
-  background: url(./icons/answer.svg) no-repeat;
+.questionBubble :global(.streamdown-markdown a) {
+  color: #FFFFFF !important;
+  text-decoration: underline;
+}
+
+.questionBubble :global(.streamdown-markdown code) {
+  color: #EEF2FF !important;
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.questionBubble :global(.streamdown-markdown pre) {
+  background: rgba(15, 23, 42, 0.35);
 }
 
 .answerWrap .itemOperation {
@@ -44,11 +63,6 @@
 
 .answerWrap:hover .itemOperation {
   display: flex;
-}
-
-.question::before {
-  right: 0;
-  background: url(./icons/question.svg) no-repeat;
 }
 
 .textArea {
@@ -74,12 +88,18 @@
 }
 
 .sendBtn {
-  background: url(./icons/send.svg) center center no-repeat;
+  background-image: url(./icons/send-white.svg), linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%);
+  background-repeat: no-repeat;
+  background-position: center center;
+  background-size: 20px 20px, 100% 100%;
+  box-shadow: 0 8px 18px -8px rgba(99, 102, 241, 0.85);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 .sendBtn:hover {
-  background-image: url(./icons/send-active.svg);
-  background-color: #EBF5FF;
+  background-image: url(./icons/send-white.svg), linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);
+  box-shadow: 0 10px 22px -8px rgba(99, 102, 241, 0.95);
+  transform: translateY(-1px);
 }
 
 .textArea:focus+div .count {

@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next'
 import TemplateVarPanel, { PanelTitle, VarOpBtnGroup } from '../value-panel'
 import FileUploaderInAttachmentWrapper from '../base/file-uploader-in-attachment'
 import s from './style.module.css'
-import { AppInfoComp, ChatBtn, EditBtn, FootLogo, PromptTemplate } from './massive-component'
+import { AppInfoComp, ChatBtn, EditBtn, PromptTemplate } from './massive-component'
 import type { AppInfo, PromptConfig } from '@/types/app'
 import Toast from '@/app/components/base/toast'
 import Select from '@/app/components/base/select'
@@ -81,8 +81,8 @@ const Welcome: FC<IWelcomeProps> = ({
 
   const renderHeader = () => {
     return (
-      <div className='absolute top-0 left-0 right-0 flex items-center justify-between border-b border-gray-100 mobile:h-12 tablet:h-16 px-8 bg-white'>
-        <div className='text-gray-900'>{conversationName}</div>
+      <div className='absolute top-0 left-0 right-0 flex items-center justify-between border-b border-gray-100 mobile:h-12 tablet:h-16 px-6 tablet:px-8 bg-white/90 backdrop-blur'>
+        <div className='truncate text-sm font-medium text-gray-800'>{conversationName}</div>
       </div>
     )
   }
@@ -125,7 +125,7 @@ const Welcome: FC<IWelcomeProps> = ({
               <input
                 type="number"
                 className="block w-full p-2 text-gray-900 border border-gray-300 rounded-lg bg-gray-50 sm:text-xs focus:ring-blue-500 focus:border-blue-500 "
-                placeholder={`${item.name}${!item.required ? `(${t('appDebug.variableTable.optional')})` : ''}`}
+                placeholder={`${item.name}${!item.required ? `(${t('app.variableTable.optional')})` : ''}`}
                 value={inputs[item.key]}
                 onChange={(e) => { onInputsChange({ ...inputs, [item.key]: e.target.value }) }}
               />
@@ -172,33 +172,33 @@ const Welcome: FC<IWelcomeProps> = ({
   }
 
   const canChat = () => {
-    const vars = promptConfig?.prompt_variables ?? [];
+    const vars = promptConfig?.prompt_variables ?? []
 
-    const hasEmptyRequired = vars.some(v => {
-      const isRequired = v?.required ?? true;
-      if (!isRequired) return false;
+    const hasEmptyRequired = vars.some((v) => {
+      const isRequired = v?.required ?? true
+      if (!isRequired) { return false }
 
-      const val = inputs?.[v.key];
+      const val = inputs?.[v.key]
 
-      if (typeof val === 'string') return val.trim() === '';
+      if (typeof val === 'string') { return val.trim() === '' }
 
-      return val === undefined || val === null;
-    });
+      return val === undefined || val === null
+    })
 
     if (hasEmptyRequired) {
-      logError(t('app.errorMessage.valueOfVarRequired'));
-      return false;
+      logError(t('app.errorMessage.valueOfVarRequired'))
+      return false
     }
 
-    return true;
-  };
+    return true
+  }
 
   const handleChat = () => {
     if (!canChat()) { return }
 
     Object.keys(inputs).forEach((key) => {
       if (!inputs[key])
-        delete inputs[key]
+      { delete inputs[key] }
     })
 
     onStartChat(inputs)
@@ -357,7 +357,7 @@ const Welcome: FC<IWelcomeProps> = ({
         {/*  Has't set inputs  */}
         {
           !hasSetInputs && (
-            <div className='mobile:pt-[72px] tablet:pt-[128px] pc:pt-[200px]'>
+            <div className='mobile:pt-[40px] tablet:pt-[88px] pc:pt-[120px]'>
               {hasVar
                 ? (
                   renderVarPanel()
@@ -374,23 +374,23 @@ const Welcome: FC<IWelcomeProps> = ({
 
         {/* foot */}
         {!hasSetInputs && (
-          <div className='mt-4 flex justify-between items-center h-8 text-xs text-gray-400'>
-
-            {siteInfo.privacy_policy
-              ? <div>{t('app.chat.privacyPolicyLeft')}
-                <a
-                  className='text-gray-500'
-                  href={siteInfo.privacy_policy}
-                  target='_blank'
-                >{t('app.chat.privacyPolicyMiddle')}</a>
-                {t('app.chat.privacyPolicyRight')}
-              </div>
-              : <div>
-              </div>}
-            <a className='flex items-center pr-3 space-x-3' href="https://dify.ai/" target="_blank">
-              <span className='uppercase'>{t('app.chat.powerBy')}</span>
-              <FootLogo />
-            </a>
+          <div className='mt-5 flex flex-col tablet:flex-row justify-between items-center gap-2 h-auto tablet:h-8 text-[11px] text-gray-400'>
+            <div>
+              {siteInfo.privacy_policy
+                ? <span>{t('app.chat.privacyPolicyLeft')}
+                  <a
+                    className='text-gray-500'
+                    href={siteInfo.privacy_policy}
+                    target='_blank'
+                  >{t('app.chat.privacyPolicyMiddle')}</a>
+                  {t('app.chat.privacyPolicyRight')}
+                </span>
+                : <span>你的职业规划，从一次对话开始</span>}
+            </div>
+            <div className='flex items-center gap-1.5 pr-1'>
+              <img src='/logo.svg' alt={siteInfo.title} className='w-4 h-4 rounded' />
+              <span>{siteInfo.title}</span>
+            </div>
           </div>
         )}
       </div>

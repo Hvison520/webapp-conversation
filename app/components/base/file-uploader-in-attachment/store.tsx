@@ -1,6 +1,7 @@
 import {
   createContext,
   useContext,
+  useEffect,
   useRef,
 } from 'react'
 import {
@@ -56,6 +57,15 @@ export const FileContextProvider = ({
   const storeRef = useRef<FileStore | undefined>(undefined)
 
   if (!storeRef.current) { storeRef.current = createFileStore(value, onChange) }
+
+  useEffect(() => {
+    // keep the internal store in sync when the controlled value is cleared outside
+    const store = storeRef.current
+    if (!store || value === undefined) { return }
+    if (store.getState().files !== value) {
+      store.setState({ files: [...value] })
+    }
+  }, [value])
 
   return (
     <FileContext.Provider value={storeRef.current}>

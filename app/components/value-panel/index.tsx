@@ -3,7 +3,6 @@ import type { FC, ReactNode } from 'react'
 import React from 'react'
 import cn from 'classnames'
 import { useTranslation } from 'react-i18next'
-import s from './style.module.css'
 import { StarIcon } from '@/app/components//welcome/massive-component'
 import Button from '@/app/components/base/button'
 
@@ -21,16 +20,20 @@ const TemplateVarPanel: FC<ITemplateVarPanelProps> = ({
   isFold,
 }) => {
   return (
-    <div className={cn(isFold ? 'border border-indigo-100' : s.boxShodow, className, 'rounded-xl ')}>
+    <div
+      className={cn(
+        'rounded-2xl border overflow-hidden bg-white',
+        isFold ? 'border-indigo-100 shadow-sm' : 'border-gray-100 shadow-[0_24px_70px_-30px_rgba(79,70,229,0.35)]',
+        className,
+      )}
+    >
       {/* header */}
-      <div
-        className={cn(isFold && 'rounded-b-xl', 'rounded-t-xl px-6 py-4 bg-indigo-25 text-xs')}
-      >
+      <div className='px-6 tablet:px-8 py-5 text-xs'>
         {header}
       </div>
       {/* body */}
       {!isFold && children && (
-        <div className='rounded-b-xl p-6'>
+        <div className='px-6 tablet:px-8 pb-7'>
           {children}
         </div>
       )}

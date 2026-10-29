@@ -90,10 +90,35 @@ export interface IChatItem {
   message_files?: VisionFile[]
 }
 
+export interface HumanInputAction {
+  id: string
+  title: string
+  button_style?: string
+}
+
+export interface PendingHumanInput {
+  form_id: string
+  node_id: string
+  node_title?: string
+  form_content: string
+  inputs?: any[]
+  actions: HumanInputAction[]
+  form_token: string
+  resolved_default_values?: Record<string, any>
+  expiration_time?: number
+  workflow_run_id: string
+  task_id: string
+  conversation_id: string
+  message_id: string
+  submitting?: boolean
+  submitted?: boolean
+}
+
 export type ChatItem = IChatItem & {
   isError?: boolean
   workflow_run_id?: string
   workflowProcess?: WorkflowProcess
+  humanInput?: PendingHumanInput
 }
 
 export interface ResponseHolder {}

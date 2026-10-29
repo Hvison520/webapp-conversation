@@ -9,10 +9,10 @@ import Toast from '@/app/components/base/toast'
 import Sidebar from '@/app/components/sidebar'
 import ConfigSence from '@/app/components/config-scence'
 import Header from '@/app/components/header'
-import { fetchAppParams, fetchChatList, fetchConversations, generationConversationName, sendChatMessage, updateFeedback } from '@/service'
+import { fetchAppParams, fetchChatList, fetchConversations, generationConversationName, sendChatMessage, streamWorkflowEvents, submitHumanInput, updateFeedback } from '@/service'
 import type { ChatItem, ConversationItem, Feedbacktype, PromptConfig, VisionFile, VisionSettings } from '@/types/app'
 import type { FileUpload } from '@/app/components/base/file-uploader-in-attachment/types'
-import { Resolution, TransferMethod, WorkflowRunningStatus } from '@/types/app'
+import { Resolution, TransferMethod } from '@/types/app'
 import Chat from '@/app/components/chat'
 import { setLocaleOnClient } from '@/i18n/client'
 import useBreakpoints, { MediaType } from '@/hooks/use-breakpoints'
@@ -21,7 +21,8 @@ import { replaceVarWithValues, userInputsFormToPromptVariables } from '@/utils/p
 import AppUnavailable from '@/app/components/app-unavailable'
 import { API_KEY, APP_ID, APP_INFO, isShowPrompt, promptTemplate } from '@/config'
 import type { Annotation as AnnotationType } from '@/types/log'
-import { addFileInfos, sortAgentSorts } from '@/utils/tools'
+import { addFileInfos, createThinkStreamFilter, sortAgentSorts, stripThinkTags } from '@/utils/tools'
+import type { HumanInputEvent } from '@/service/base'
 
 export interface IMainProps {
   params: any
@@ -51,7 +52,7 @@ const Main: FC<IMainProps> = () => {
   const [fileConfig, setFileConfig] = useState<FileUpload | undefined>()
 
   useEffect(() => {
-    if (APP_INFO?.title) { document.title = `${APP_INFO.title} - Powered by Dify` }
+    if (APP_INFO?.title) { document.title = `${APP_INFO.title}｜AI 职业规划顾问` }
   }, [APP_INFO?.title])
 
   // onData change thought (the produce obj). https://github.com/immerjs/immer/issues/576
@@ -125,7 +126,8 @@ const Main: FC<IMainProps> = () => {
     }
 
     // update chat list of current conversation
-    if (!isNewConversation && !conversationIdChangeBecauseOfNew && !isResponding) {
+    const hasPendingHumanInput = getChatList().some(item => item.humanInput && !item.humanInput.submitted)
+    if (!isNewConversation && !conversationIdChangeBecauseOfNew && !isResponding && currConversationId && !hasPendingHumanInput) {
       fetchChatList(currConversationId).then((res: any) => {
         const { data } = res
         const newChatList: ChatItem[] = generateNewChatListWithOpenStatement(notSyncToStateIntroduction, notSyncToStateInputs)
@@ -140,7 +142,7 @@ const Main: FC<IMainProps> = () => {
           })
           newChatList.push({
             id: item.id,
-            content: item.answer,
+            content: stripThinkTags(item.answer || ''),
             agent_thoughts: addFileInfos(item.agent_thoughts ? sortAgentSorts(item.agent_thoughts) : item.agent_thoughts, item.message_files),
             feedback: item.feedback,
             isAnswer: true,
@@ -173,6 +175,7 @@ const Main: FC<IMainProps> = () => {
   */
   const [chatList, setChatList, getChatList] = useGetState<ChatItem[]>([])
   const chatListDomRef = useRef<HTMLDivElement>(null)
+  const resumeStreamsRef = useRef<Set<string>>(new Set())
   useEffect(() => {
     // scroll to bottom with page-level scrolling
     if (chatListDomRef.current) {
@@ -186,6 +189,7 @@ const Main: FC<IMainProps> = () => {
   }, [chatList, currConversationId])
   // user can not edit inputs if user had send message
   const canEditInputs = !chatList.some(item => item.isAnswer === false) && isNewConversation
+  const hasPendingHumanInput = chatList.some(item => item.humanInput && !item.humanInput.submitted)
   const createNewChat = () => {
     // if new chat is already exist, do not create new chat
     if (conversationList.some(item => item.id === '-1')) { return }
@@ -307,7 +311,7 @@ const Main: FC<IMainProps> = () => {
     let emptyRequiredInput = false
     promptConfig.prompt_variables.forEach((item) => {
       if (item.required && !currInputs[item.key])
-        emptyRequiredInput = true
+      { emptyRequiredInput = true }
     })
 
     if (emptyRequiredInput) {
@@ -424,6 +428,7 @@ const Main: FC<IMainProps> = () => {
 
     const prevTempNewConversationId = getCurrConversationId() || '-1'
     let tempNewConversationId = ''
+    const thinkFilter = createThinkStreamFilter()
 
     setRespondingTrue()
     sendChatMessage(data, {
@@ -432,7 +437,8 @@ const Main: FC<IMainProps> = () => {
       },
       onData: (message: string, isFirstMessage: boolean, { conversationId: newConversationId, messageId, taskId }: any) => {
         if (!isAgentMode) {
-          responseItem.content = responseItem.content + message
+          const visibleMessage = thinkFilter(message)
+          if (visibleMessage) { responseItem.content = responseItem.content + visibleMessage }
         }
         else {
           const lastThought = responseItem.agent_thoughts?.[responseItem.agent_thoughts?.length - 1]
@@ -561,9 +567,35 @@ const Main: FC<IMainProps> = () => {
           (draft) => {
             const current = draft.find(item => item.id === messageReplace.id)
 
-            if (current) { current.content = messageReplace.answer }
+            if (current) { current.content = stripThinkTags(messageReplace.answer) }
           },
         ))
+      },
+      onHumanInput: (humanInputEvent: HumanInputEvent) => {
+        const { data: humanInputData, conversation_id, message_id, task_id, workflow_run_id } = humanInputEvent
+        if (!humanInputData?.form_token) { return }
+
+        if (message_id && !hasSetResponseId) {
+          responseItem.id = message_id
+          hasSetResponseId = true
+        }
+        if (conversation_id) { tempNewConversationId = conversation_id }
+        responseItem.content = ''
+        responseItem.humanInput = {
+          ...humanInputData,
+          conversation_id,
+          message_id,
+          task_id,
+          workflow_run_id,
+        }
+        setRespondingFalse()
+
+        updateCurrentQA({
+          responseItem,
+          questionId,
+          placeholderAnswerId,
+          questionItem,
+        })
       },
       onError() {
         setRespondingFalse()
@@ -572,52 +604,10 @@ const Main: FC<IMainProps> = () => {
           draft.splice(draft.findIndex(item => item.id === placeholderAnswerId), 1)
         }))
       },
-      onWorkflowStarted: ({ workflow_run_id, task_id }) => {
-        // taskIdRef.current = task_id
-        responseItem.workflow_run_id = workflow_run_id
-        responseItem.workflowProcess = {
-          status: WorkflowRunningStatus.Running,
-          tracing: [],
-        }
-        setChatList(produce(getChatList(), (draft) => {
-          const currentIndex = draft.findIndex(item => item.id === responseItem.id)
-          draft[currentIndex] = {
-            ...draft[currentIndex],
-            ...responseItem,
-          }
-        }))
-      },
-      onWorkflowFinished: ({ data }) => {
-        responseItem.workflowProcess!.status = data.status as WorkflowRunningStatus
-        setChatList(produce(getChatList(), (draft) => {
-          const currentIndex = draft.findIndex(item => item.id === responseItem.id)
-          draft[currentIndex] = {
-            ...draft[currentIndex],
-            ...responseItem,
-          }
-        }))
-      },
-      onNodeStarted: ({ data }) => {
-        responseItem.workflowProcess!.tracing!.push(data as any)
-        setChatList(produce(getChatList(), (draft) => {
-          const currentIndex = draft.findIndex(item => item.id === responseItem.id)
-          draft[currentIndex] = {
-            ...draft[currentIndex],
-            ...responseItem,
-          }
-        }))
-      },
-      onNodeFinished: ({ data }) => {
-        const currentIndex = responseItem.workflowProcess!.tracing!.findIndex(item => item.node_id === data.node_id)
-        responseItem.workflowProcess!.tracing[currentIndex] = data as any
-        setChatList(produce(getChatList(), (draft) => {
-          const currentIndex = draft.findIndex(item => item.id === responseItem.id)
-          draft[currentIndex] = {
-            ...draft[currentIndex],
-            ...responseItem,
-          }
-        }))
-      },
+      onWorkflowStarted: () => {},
+      onWorkflowFinished: () => {},
+      onNodeStarted: () => {},
+      onNodeFinished: () => {},
     })
   }
 
@@ -636,6 +626,128 @@ const Main: FC<IMainProps> = () => {
     notify({ type: 'success', message: t('common.api.success') })
   }
 
+  const updateChatItem = (itemId: string, updater: (item: ChatItem) => void) => {
+    // functional update keeps rapid streaming chunks from overwriting each other
+    setChatList(prev => produce(prev, (draft) => {
+      const target = draft.find(item => item.id === itemId)
+      if (target) { updater(target) }
+    }))
+  }
+
+  const markHumanInputSubmitted = (itemId: string) => {
+    updateChatItem(itemId, (item) => {
+      if (item.humanInput) {
+        item.humanInput.submitting = false
+        item.humanInput.submitted = true
+      }
+    })
+  }
+
+  const handleHumanInputSubmit = async (itemId: string, actionId: string) => {
+    const target = getChatList().find(item => item.id === itemId)
+    const pending = target?.humanInput
+    if (!pending || pending.submitting || pending.submitted) { return }
+
+    updateChatItem(itemId, (item) => {
+      if (item.humanInput) { item.humanInput.submitting = true }
+    })
+    setRespondingTrue()
+
+    try {
+      await submitHumanInput(pending.form_token, {
+        action: actionId,
+        inputs: pending.resolved_default_values || {},
+      })
+    }
+    catch (e) {
+      updateChatItem(itemId, (item) => {
+        if (item.humanInput) { item.humanInput.submitting = false }
+      })
+      setRespondingFalse()
+      notify({ type: 'error', message: '提交失败，请重试' })
+      return
+    }
+
+    const workflowRunId = pending.workflow_run_id
+    // the resumed stream is still open and will continue after the form is filled
+    if (resumeStreamsRef.current.has(workflowRunId)) { return }
+    resumeStreamsRef.current.add(workflowRunId)
+
+    const thinkFilter = createThinkStreamFilter()
+    streamWorkflowEvents(workflowRunId, {
+      onData: (message: string) => {
+        const visibleMessage = thinkFilter(message)
+        if (!visibleMessage) { return }
+        updateChatItem(itemId, (item) => {
+          if (item.humanInput) {
+            item.humanInput.submitting = false
+            item.humanInput.submitted = true
+          }
+          item.content = item.content + visibleMessage
+        })
+      },
+      onMessageReplace: (messageReplace) => {
+        updateChatItem(itemId, (item) => {
+          item.content = stripThinkTags(messageReplace.answer || '')
+        })
+      },
+      onHumanInputFilled: () => {
+        markHumanInputSubmitted(itemId)
+      },
+      onHumanInput: (humanInputEvent: HumanInputEvent) => {
+        const { data: humanInputData, conversation_id, message_id, task_id, workflow_run_id } = humanInputEvent
+        if (!humanInputData?.form_token) { return }
+        setRespondingFalse()
+        updateChatItem(itemId, (item) => {
+          item.content = ''
+          item.humanInput = {
+            ...humanInputData,
+            conversation_id,
+            message_id,
+            task_id,
+            workflow_run_id,
+          }
+        })
+      },
+      onWorkflowFinished: ({ data }) => {
+        let outputs: any = data?.outputs
+        if (typeof outputs === 'string') {
+          try { outputs = JSON.parse(outputs) }
+          catch { outputs = undefined }
+        }
+        const finalAnswer = outputs?.answer
+        if (finalAnswer) {
+          const cleaned = stripThinkTags(finalAnswer)
+          updateChatItem(itemId, (item) => {
+            if (!item.content.trim()) { item.content = cleaned }
+            if (item.humanInput) {
+              item.humanInput.submitting = false
+              item.humanInput.submitted = true
+            }
+          })
+        }
+      },
+      onMessageEnd: () => {},
+      onThought: () => {},
+      onFile: () => {},
+      onWorkflowStarted: () => {},
+      onNodeStarted: () => {},
+      onNodeFinished: () => {},
+      onCompleted: () => {
+        resumeStreamsRef.current.delete(workflowRunId)
+        markHumanInputSubmitted(itemId)
+        setRespondingFalse()
+      },
+      onError: () => {
+        resumeStreamsRef.current.delete(workflowRunId)
+        updateChatItem(itemId, (item) => {
+          if (item.humanInput) { item.humanInput.submitting = false }
+        })
+        setRespondingFalse()
+      },
+    })
+  }
+
   const renderSidebar = () => {
     if (!APP_ID || !APP_INFO || !promptConfig) { return null }
     return (
@@ -648,14 +760,15 @@ const Main: FC<IMainProps> = () => {
     )
   }
 
-  if (appUnavailable) { return <AppUnavailable isUnknownReason={isUnknownReason} errMessage={!hasSetAppConfig ? 'Please set APP_ID and API_KEY in config/index.tsx' : ''} /> }
+  if (appUnavailable) { return <AppUnavailable isUnknownReason={isUnknownReason} errMessage={!hasSetAppConfig ? '请在 .env.local 或 config/index.ts 中配置 APP_ID 与 API_KEY' : ''} /> }
 
   if (!APP_ID || !APP_INFO || !promptConfig) { return <Loading type='app' /> }
 
   return (
-    <div className='bg-gray-100'>
+    <div className='min-h-screen bg-gradient-to-br from-indigo-50 via-white to-violet-50'>
       <Header
         title={APP_INFO.title}
+        subtitle="AI 职业规划顾问 · 让每一步选择更有方向"
         isMobile={isMobile}
         onShowSideBar={showSidebar}
         onCreateNewChat={() => handleConversationIdChange('-1')}
@@ -671,7 +784,7 @@ const Main: FC<IMainProps> = () => {
           </div>
         )}
         {/* main */}
-        <div className='flex-grow flex flex-col h-[calc(100vh_-_3rem)] overflow-y-auto'>
+        <div className='flex-grow flex flex-col h-[calc(100vh_-_4rem)] overflow-y-auto'>
           <ConfigSence
             conversationName={conversationName}
             hasSetInputs={hasSetInputs}
@@ -695,6 +808,8 @@ const Main: FC<IMainProps> = () => {
                   checkCanSend={checkCanSend}
                   visionConfig={visionConfig}
                   fileConfig={fileConfig}
+                  humanInputPending={hasPendingHumanInput}
+                  onHumanInputSubmit={handleHumanInputSubmit}
                 />
               </div>)
           }

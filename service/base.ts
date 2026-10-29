@@ -1,7 +1,7 @@
 import { API_PREFIX } from '@/config'
 import Toast from '@/app/components/base/toast'
 import type { AnnotationReply, MessageEnd, MessageReplace, ThoughtItem } from '@/app/components/chat/type'
-import type { VisionFile } from '@/types/app'
+import type { PendingHumanInput, VisionFile } from '@/types/app'
 
 const TIME_OUT = 100000
 
@@ -114,6 +114,18 @@ export type IOnWorkflowFinished = (workflowFinished: WorkflowFinishedResponse) =
 export type IOnNodeStarted = (nodeStarted: NodeStartedResponse) => void
 export type IOnNodeFinished = (nodeFinished: NodeFinishedResponse) => void
 
+export interface HumanInputEvent {
+  event: 'human_input_required'
+  conversation_id: string
+  message_id: string
+  task_id: string
+  workflow_run_id: string
+  data: Omit<PendingHumanInput, 'workflow_run_id' | 'task_id' | 'conversation_id' | 'message_id'>
+}
+
+export type IOnHumanInput = (humanInput: HumanInputEvent) => void
+export type IOnHumanInputFilled = (event: Record<string, any>) => void
+
 interface IOtherOptions {
   isPublicAPI?: boolean
   bodyStringify?: boolean
@@ -131,6 +143,8 @@ interface IOtherOptions {
   onWorkflowFinished?: IOnWorkflowFinished
   onNodeStarted?: IOnNodeStarted
   onNodeFinished?: IOnNodeFinished
+  onHumanInput?: IOnHumanInput
+  onHumanInputFilled?: IOnHumanInputFilled
 }
 
 function unicodeToChar(text: string) {
@@ -151,6 +165,8 @@ const handleStream = (
   onWorkflowFinished?: IOnWorkflowFinished,
   onNodeStarted?: IOnNodeStarted,
   onNodeFinished?: IOnNodeFinished,
+  onHumanInput?: IOnHumanInput,
+  onHumanInputFilled?: IOnHumanInputFilled,
 ) => {
   if (!response.ok) { throw new Error('Network response was not ok') }
 
@@ -182,7 +198,7 @@ const handleStream = (
               })
               return
             }
-            if (bufferObj.status === 400 || !bufferObj.event) {
+            if (bufferObj.status === 400 || !bufferObj.event || bufferObj.event === 'error') {
               onData('', false, {
                 conversationId: undefined,
                 messageId: '',
@@ -225,6 +241,12 @@ const handleStream = (
             }
             else if (bufferObj.event === 'node_finished') {
               onNodeFinished?.(bufferObj as NodeFinishedResponse)
+            }
+            else if (bufferObj.event === 'human_input_required') {
+              onHumanInput?.(bufferObj as HumanInputEvent)
+            }
+            else if (bufferObj.event === 'human_input_form_filled') {
+              onHumanInputFilled?.(bufferObj)
             }
           }
         })
@@ -353,9 +375,9 @@ export const upload = (fetchOptions: any): Promise<any> => {
   })
 }
 
-export const ssePost = (
-  url: string,
-  fetchOptions: any,
+const sseRequest = (
+  urlWithPrefix: string,
+  options: any,
   {
     onData,
     onCompleted,
@@ -367,19 +389,11 @@ export const ssePost = (
     onWorkflowFinished,
     onNodeStarted,
     onNodeFinished,
+    onHumanInput,
+    onHumanInputFilled,
     onError,
   }: IOtherOptions,
 ) => {
-  const options = Object.assign({}, baseOptions, {
-    method: 'POST',
-  }, fetchOptions)
-
-  const urlPrefix = API_PREFIX
-  const urlWithPrefix = `${urlPrefix}${url.startsWith('/') ? url : `/${url}`}`
-
-  const { body } = options
-  if (body) { options.body = JSON.stringify(body) }
-
   globalThis.fetch(urlWithPrefix, options)
     .then((res: any) => {
       if (!/^(2|3)\d{2}$/.test(res.status)) {
@@ -400,12 +414,54 @@ export const ssePost = (
         onData?.(str, isFirstMessage, moreInfo)
       }, () => {
         onCompleted?.()
-      }, onThought, onMessageEnd, onMessageReplace, onFile, onWorkflowStarted, onWorkflowFinished, onNodeStarted, onNodeFinished)
+      }, onThought, onMessageEnd, onMessageReplace, onFile, onWorkflowStarted, onWorkflowFinished, onNodeStarted, onNodeFinished, onHumanInput, onHumanInputFilled)
     })
     .catch((e) => {
       Toast.notify({ type: 'error', message: e })
       onError?.(e)
     })
+}
+
+export const ssePost = (
+  url: string,
+  fetchOptions: any,
+  handlers: IOtherOptions,
+) => {
+  const options = Object.assign({}, baseOptions, {
+    method: 'POST',
+  }, fetchOptions)
+
+  const urlPrefix = API_PREFIX
+  const urlWithPrefix = `${urlPrefix}${url.startsWith('/') ? url : `/${url}`}`
+
+  const { body } = options
+  if (body) { options.body = JSON.stringify(body) }
+
+  sseRequest(urlWithPrefix, options, handlers)
+}
+
+export const sseGet = (
+  url: string,
+  fetchOptions: any,
+  handlers: IOtherOptions,
+) => {
+  const options = Object.assign({}, baseOptions, {
+    method: 'GET',
+  }, fetchOptions)
+
+  let urlWithPrefix = `${API_PREFIX}${url.startsWith('/') ? url : `/${url}`}`
+
+  const { params } = options
+  if (params) {
+    const paramsArray: string[] = []
+    Object.keys(params).forEach(key =>
+      paramsArray.push(`${key}=${encodeURIComponent(params[key])}`),
+    )
+    urlWithPrefix += `${urlWithPrefix.includes('?') ? '&' : '?'}${paramsArray.join('&')}`
+    delete options.params
+  }
+
+  sseRequest(urlWithPrefix, options, handlers)
 }
 
 export const request = (url: string, options = {}, otherOptions?: IOtherOptions) => {

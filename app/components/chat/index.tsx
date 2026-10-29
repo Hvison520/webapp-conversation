@@ -15,7 +15,8 @@ import Toast from '@/app/components/base/toast'
 import ChatImageUploader from '@/app/components/base/image-uploader/chat-image-uploader'
 import ImageList from '@/app/components/base/image-uploader/image-list'
 import { useImageFiles } from '@/app/components/base/image-uploader/hooks'
-import FileUploaderInAttachmentWrapper from '@/app/components/base/file-uploader-in-attachment'
+import { AttachmentFileList, AttachmentFileTrigger } from '@/app/components/base/file-uploader-in-attachment'
+import { FileContextProvider } from '@/app/components/base/file-uploader-in-attachment/store'
 import type { FileEntity, FileUpload } from '@/app/components/base/file-uploader-in-attachment/types'
 import { getProcessedFiles } from '@/app/components/base/file-uploader-in-attachment/utils'
 
@@ -37,6 +38,8 @@ export interface IChatProps {
   controlClearQuery?: number
   visionConfig?: VisionSettings
   fileConfig?: FileUpload
+  humanInputPending?: boolean
+  onHumanInputSubmit?: (itemId: string, actionId: string) => void
 }
 
 const Chat: FC<IChatProps> = ({
@@ -51,6 +54,8 @@ const Chat: FC<IChatProps> = ({
   controlClearQuery,
   visionConfig,
   fileConfig,
+  humanInputPending,
+  onHumanInputSubmit,
 }) => {
   const { t } = useTranslation()
   const { notify } = Toast
@@ -97,6 +102,10 @@ const Chat: FC<IChatProps> = ({
   const [attachmentFiles, setAttachmentFiles] = React.useState<FileEntity[]>([])
 
   const handleSend = () => {
+    if (humanInputPending) {
+      logError(t('app.chat.humanInputTip'))
+      return
+    }
     if (!valid() || (checkCanSend && !checkCanSend())) { return }
     const hasPendingImageUploads = files.some(file => file.progress !== -1 && file.progress < 100)
     const hasPendingAttachmentUploads = attachmentFiles.some(file => file.progress !== -1 && file.progress < 100)
@@ -161,6 +170,7 @@ const Chat: FC<IChatProps> = ({
               onFeedback={onFeedback}
               isResponding={isResponding && isLast}
               suggestionClick={suggestionClick}
+              onHumanInputSubmit={onHumanInputSubmit}
             />
           }
           return (
@@ -177,7 +187,7 @@ const Chat: FC<IChatProps> = ({
       {
         !isHideSendInput && (
           <div className='fixed z-10 bottom-0 left-1/2 transform -translate-x-1/2 pc:ml-[122px] tablet:ml-[96px] mobile:ml-0 pc:w-[794px] tablet:w-[794px] max-w-full mobile:w-full px-3.5'>
-            <div className='p-[5.5px] max-h-[150px] bg-white border-[1.5px] border-gray-200 rounded-xl overflow-y-auto'>
+            <div className='relative p-[6px] max-h-[150px] bg-white border-[1.5px] border-gray-200 rounded-2xl overflow-y-auto shadow-[0_12px_36px_-12px_rgba(79,70,229,0.28)] transition focus-within:border-indigo-300 focus-within:ring-4 focus-within:ring-indigo-100'>
               {
                 visionConfig?.enabled && (
                   <>
@@ -201,42 +211,52 @@ const Chat: FC<IChatProps> = ({
                   </>
                 )
               }
-              {
-                fileConfig?.enabled && (
-                  <div className={`${visionConfig?.enabled ? 'pl-[52px]' : ''} mb-1`}>
-                    <FileUploaderInAttachmentWrapper
+              <FileContextProvider value={attachmentFiles} onChange={setAttachmentFiles}>
+                {
+                  fileConfig?.enabled && (
+                    <AttachmentFileList
                       fileConfig={fileConfig}
-                      value={attachmentFiles}
-                      onChange={setAttachmentFiles}
+                      className={`${visionConfig?.enabled ? 'pl-[52px]' : ''} mb-1`}
                     />
-                  </div>
-                )
-              }
-              <Textarea
-                className={`
-                  block w-full px-2 pr-[118px] py-[7px] leading-5 max-h-none text-base text-gray-700 outline-none appearance-none resize-none
-                  ${visionConfig?.enabled && 'pl-12'}
-                `}
-                value={query}
-                onChange={handleContentChange}
-                onKeyUp={handleKeyUp}
-                onKeyDown={handleKeyDown}
-                autoSize
-              />
-              <div className="absolute bottom-2 right-6 flex items-center h-8">
-                <div className={`${s.count} mr-3 h-5 leading-5 text-sm bg-gray-50 text-gray-500 px-2 rounded`}>{query.trim().length}</div>
-                <Tooltip
-                  selector='send-tip'
-                  htmlContent={
-                    <div>
-                      <div>{t('common.operation.send')} Enter</div>
-                      <div>{t('common.operation.lineBreak')} Shift Enter</div>
-                    </div>
+                  )
+                }
+                <Textarea
+                  className={`
+                    block w-full px-2 ${fileConfig?.enabled ? 'pr-[158px]' : 'pr-[118px]'} py-[7px] leading-5 max-h-none text-base text-gray-700 outline-none appearance-none resize-none placeholder:text-gray-400
+                    ${visionConfig?.enabled && 'pl-12'}
+                  `}
+                  placeholder={(humanInputPending ? t('app.chat.humanInputPlaceholder') : t('app.chat.chatPlaceholder')) as string}
+                  value={query}
+                  onChange={handleContentChange}
+                  onKeyUp={handleKeyUp}
+                  onKeyDown={handleKeyDown}
+                  autoSize
+                />
+                <div className="absolute bottom-2 right-6 flex items-center h-8">
+                  {
+                    fileConfig?.enabled && (
+                      <div className='mr-1'>
+                        <AttachmentFileTrigger fileConfig={fileConfig} />
+                      </div>
+                    )
                   }
-                >
-                  <div className={`${s.sendBtn} w-8 h-8 cursor-pointer rounded-md`} onClick={handleSend}></div>
-                </Tooltip>
-              </div>
+                  <div className={`${s.count} mr-3 h-5 leading-5 text-sm bg-gray-50 text-gray-500 px-2 rounded`}>{query.trim().length}</div>
+                  <Tooltip
+                    selector='send-tip'
+                    htmlContent={
+                      <div>
+                        <div>{t('common.operation.send')} Enter</div>
+                        <div>{t('common.operation.lineBreak')} Shift Enter</div>
+                      </div>
+                    }
+                  >
+                    <div className={`${s.sendBtn} w-8 h-8 cursor-pointer rounded-md`} onClick={handleSend}></div>
+                  </Tooltip>
+                </div>
+              </FileContextProvider>
+            </div>
+            <div className='pb-2 pt-2 text-center text-[11px] text-gray-400'>
+              内容由 AI 生成，仅供参考；重要决策请结合自身情况判断。
             </div>
           </div>
         )

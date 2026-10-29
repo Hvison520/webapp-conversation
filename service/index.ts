@@ -1,5 +1,5 @@
-import type { IOnCompleted, IOnData, IOnError, IOnFile, IOnMessageEnd, IOnMessageReplace, IOnNodeFinished, IOnNodeStarted, IOnThought, IOnWorkflowFinished, IOnWorkflowStarted } from './base'
-import { get, post, ssePost } from './base'
+import type { IOnCompleted, IOnData, IOnError, IOnFile, IOnHumanInput, IOnHumanInputFilled, IOnMessageEnd, IOnMessageReplace, IOnNodeFinished, IOnNodeStarted, IOnThought, IOnWorkflowFinished, IOnWorkflowStarted } from './base'
+import { get, post, sseGet, ssePost } from './base'
 import type { Feedbacktype } from '@/types/app'
 
 export const sendChatMessage = async (
@@ -17,6 +17,7 @@ export const sendChatMessage = async (
     onNodeStarted,
     onNodeFinished,
     onWorkflowFinished,
+    onHumanInput,
   }: {
     onData: IOnData
     onCompleted: IOnCompleted
@@ -30,6 +31,7 @@ export const sendChatMessage = async (
     onNodeStarted: IOnNodeStarted
     onNodeFinished: IOnNodeFinished
     onWorkflowFinished: IOnWorkflowFinished
+    onHumanInput?: IOnHumanInput
   },
 ) => {
   return ssePost('chat-messages', {
@@ -37,7 +39,60 @@ export const sendChatMessage = async (
       ...body,
       response_mode: 'streaming',
     },
-  }, { onData, onCompleted, onThought, onFile, onError, getAbortController, onMessageEnd, onMessageReplace, onNodeStarted, onWorkflowStarted, onWorkflowFinished, onNodeFinished })
+  }, { onData, onCompleted, onThought, onFile, onError, getAbortController, onMessageEnd, onMessageReplace, onNodeStarted, onWorkflowStarted, onWorkflowFinished, onNodeFinished, onHumanInput })
+}
+
+export const submitHumanInput = async (formToken: string, body: { action: string, inputs?: Record<string, any> }) => {
+  return post(`human-input/${formToken}`, { body })
+}
+
+export const streamWorkflowEvents = async (
+  workflowRunId: string,
+  {
+    onData,
+    onCompleted,
+    onThought,
+    onFile,
+    onError,
+    onMessageEnd,
+    onMessageReplace,
+    onWorkflowStarted,
+    onNodeStarted,
+    onNodeFinished,
+    onWorkflowFinished,
+    onHumanInput,
+    onHumanInputFilled,
+  }: {
+    onData: IOnData
+    onCompleted: IOnCompleted
+    onThought: IOnThought
+    onFile: IOnFile
+    onError: IOnError
+    onMessageEnd: IOnMessageEnd
+    onMessageReplace: IOnMessageReplace
+    onWorkflowStarted: IOnWorkflowStarted
+    onNodeStarted: IOnNodeStarted
+    onNodeFinished: IOnNodeFinished
+    onWorkflowFinished: IOnWorkflowFinished
+    onHumanInput: IOnHumanInput
+    onHumanInputFilled: IOnHumanInputFilled
+  },
+) => {
+  return sseGet(`workflow-events/${workflowRunId}`, {}, {
+    onData,
+    onCompleted,
+    onThought,
+    onFile,
+    onError,
+    onMessageEnd,
+    onMessageReplace,
+    onNodeStarted,
+    onWorkflowStarted,
+    onWorkflowFinished,
+    onNodeFinished,
+    onHumanInput,
+    onHumanInputFilled,
+  })
 }
 
 export const fetchConversations = async () => {

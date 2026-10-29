@@ -1,14 +1,10 @@
 import {
-  useCallback,
-} from 'react'
-import {
-  RiLink,
+  RiAttachment2,
   RiUploadCloud2Line,
 } from '@remixicon/react'
 import { useTranslation } from 'react-i18next'
 import { useFile } from './hooks'
 import type { FileEntity, FileUpload } from './types'
-import FileFromLinkOrLocal from './file-from-link-or-local'
 import {
   FileContextProvider,
   useStore,
@@ -17,13 +13,62 @@ import FileInput from './file-input'
 import FileItem from './file-item'
 import Button from '@/app/components/base/button'
 import cn from '@/utils/classnames'
-import { TransferMethod } from '@/types/app'
 
-interface Option {
-  value: string
-  label: string
-  icon: JSX.Element
+export const AttachmentFileList = ({
+  fileConfig,
+  className,
+}: {
+  fileConfig: FileUpload
+  className?: string
+}) => {
+  const files = useStore(s => s.files)
+  const {
+    handleRemoveFile,
+    handleReUploadFile,
+  } = useFile(fileConfig)
+
+  if (!files.length) { return null }
+
+  return (
+    <div className={cn('space-y-1', className)}>
+      {files.map(file => (
+        <FileItem
+          key={file.id}
+          file={file}
+          showDeleteAction
+          showDownloadAction={false}
+          onRemove={() => handleRemoveFile(file.id)}
+          onReUpload={() => handleReUploadFile(file.id)}
+        />
+      ))}
+    </div>
+  )
 }
+
+export const AttachmentFileTrigger = ({
+  fileConfig,
+}: {
+  fileConfig: FileUpload
+}) => {
+  const files = useStore(s => s.files)
+  const disabled = !!(fileConfig.number_limits && files.length >= fileConfig.number_limits)
+
+  return (
+    <div
+      className={cn(
+        'relative flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition',
+        disabled
+          ? 'cursor-not-allowed text-gray-300'
+          : 'cursor-pointer text-gray-500 hover:bg-indigo-50 hover:text-indigo-600',
+      )}
+      title='上传文件'
+    >
+      <RiAttachment2 className='h-5 w-5' />
+      <FileInput fileConfig={fileConfig} />
+    </div>
+  )
+}
+
 interface FileUploaderInAttachmentProps {
   fileConfig: FileUpload
 }
@@ -32,78 +77,20 @@ const FileUploaderInAttachment = ({
 }: FileUploaderInAttachmentProps) => {
   const { t } = useTranslation()
   const files = useStore(s => s.files)
-  const {
-    handleRemoveFile,
-    handleReUploadFile,
-  } = useFile(fileConfig)
-  const options = [
-    {
-      value: TransferMethod.local_file,
-      label: t('common.fileUploader.uploadFromComputer'),
-      icon: <RiUploadCloud2Line className='h-4 w-4' />,
-    },
-    {
-      value: TransferMethod.remote_url,
-      label: t('common.fileUploader.pasteFileLink'),
-      icon: <RiLink className='h-4 w-4' />,
-    },
-  ]
-
-  const renderButton = useCallback((option: Option, open?: boolean) => {
-    return (
-      <Button
-        key={option.value}
-        // variant='tertiary'
-        className={cn('relative grow', open && 'bg-components-button-tertiary-bg-hover')}
-        disabled={!!(fileConfig.number_limits && files.length >= fileConfig.number_limits)}
-      >
-        {option.icon}
-        <span className='ml-1'>{option.label}</span>
-        {
-          option.value === TransferMethod.local_file && (
-            <FileInput fileConfig={fileConfig} />
-          )
-        }
-      </Button>
-    )
-  }, [fileConfig, files.length])
-  const renderTrigger = useCallback((option: Option) => {
-    return (open: boolean) => renderButton(option, open)
-  }, [renderButton])
-  const renderOption = useCallback((option: Option) => {
-    if (option.value === TransferMethod.local_file && fileConfig?.allowed_file_upload_methods?.includes(TransferMethod.local_file)) { return renderButton(option) }
-
-    if (option.value === TransferMethod.remote_url && fileConfig?.allowed_file_upload_methods?.includes(TransferMethod.remote_url)) {
-      return (
-        <FileFromLinkOrLocal
-          key={option.value}
-          showFromLocal={false}
-          trigger={renderTrigger(option)}
-          fileConfig={fileConfig}
-        />
-      )
-    }
-  }, [renderButton, renderTrigger, fileConfig])
 
   return (
     <div>
       <div className='flex items-center space-x-1'>
-        {options.map(renderOption)}
+        <Button
+          className='relative grow'
+          disabled={!!(fileConfig.number_limits && files.length >= fileConfig.number_limits)}
+        >
+          <RiUploadCloud2Line className='h-4 w-4' />
+          <span className='ml-1'>{t('common.fileUploader.uploadFromComputer')}</span>
+          <FileInput fileConfig={fileConfig} />
+        </Button>
       </div>
-      <div className='mt-1 space-y-1'>
-        {
-          files.map(file => (
-            <FileItem
-              key={file.id}
-              file={file}
-              showDeleteAction
-              showDownloadAction={false}
-              onRemove={() => handleRemoveFile(file.id)}
-              onReUpload={() => handleReUploadFile(file.id)}
-            />
-          ))
-        }
-      </div>
+      <AttachmentFileList className='mt-1' fileConfig={fileConfig} />
     </div>
   )
 }

@@ -1,0 +1,17 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="careerLogoBg" x1="4" y1="4" x2="60" y2="60" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#4F46E5"/>
+      <stop offset="0.55" stop-color="#6366F1"/>
+      <stop offset="1" stop-color="#8B5CF6"/>
+    </linearGradient>
+    <linearGradient id="careerLogoNeedle" x1="24" y1="24" x2="40" y2="40" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#E0E7FF"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="16" fill="url(#careerLogoBg)"/>
+  <circle cx="32" cy="32" r="16.5" stroke="white" stroke-opacity="0.55" stroke-width="2.5"/>
+  <path d="M40 24L35.2 35.2L24 40L28.8 28.8L40 24Z" fill="url(#careerLogoNeedle)"/>
+  <circle cx="32" cy="32" r="2.6" fill="#A5B4FC"/>
+</svg>

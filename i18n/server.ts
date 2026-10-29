@@ -24,6 +24,10 @@ export const getLocaleOnServer = async (): Promise<Locale> => {
     languages = new Negotiator({ headers: negotiatorHeaders }).languages()
   }
 
+  // `*` is not a valid locale for intl-localematcher (e.g. requests without Accept-Language)
+  languages = languages.filter(language => language !== '*')
+  if (!languages.length) { return i18n.defaultLocale as Locale }
+
   // match locale
   const matchedLocale = match(languages, locales, i18n.defaultLocale) as Locale
   return matchedLocale

@@ -14,27 +14,25 @@ type IQuestionProps = Pick<IChatItem, 'id' | 'content' | 'useCurrentUserAvatar'>
 const Question: FC<IQuestionProps> = ({ id, content, useCurrentUserAvatar, imgSrcs }) => {
   const userName = ''
   return (
-    <div className='flex items-start justify-end' key={id}>
-      <div>
-        <div className={`${s.question} relative text-sm text-gray-900`}>
-          <div
-            className={'mr-2 py-3 px-4 bg-blue-500 rounded-tl-2xl rounded-b-2xl'}
-          >
-            {imgSrcs && imgSrcs.length > 0 && (
-              <ImageGallery srcs={imgSrcs} />
-            )}
-            <StreamdownMarkdown content={content} />
-          </div>
+    <div className='flex items-start justify-end gap-3' key={id}>
+      <div className={`${s.question} relative min-w-0 max-w-[calc(100%-3.5rem)] text-sm text-white`}>
+        <div
+          className={`${s.questionBubble} px-4 py-3 bg-gradient-to-br from-indigo-500 via-indigo-600 to-violet-600 rounded-2xl rounded-tr-md shadow-lg shadow-indigo-200/70`}
+        >
+          {imgSrcs && imgSrcs.length > 0 && (
+            <ImageGallery srcs={imgSrcs} />
+          )}
+          <StreamdownMarkdown content={content} />
         </div>
       </div>
       {useCurrentUserAvatar
         ? (
-          <div className='w-10 h-10 shrink-0 leading-10 text-center mr-2 rounded-full bg-primary-600 text-white'>
+          <div className='w-10 h-10 shrink-0 leading-10 text-center rounded-full bg-gradient-to-br from-amber-400 to-orange-500 text-white font-semibold shadow-lg shadow-orange-200/70'>
             {userName?.[0].toLocaleUpperCase()}
           </div>
         )
         : (
-          <div className={`${s.questionIcon} w-10 h-10 shrink-0 `}></div>
+          <div className={`${s.questionIcon} w-10 h-10 shrink-0`} />
         )}
     </div>
   )
