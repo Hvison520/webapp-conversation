@@ -193,9 +193,13 @@ const Answer: FC<IAnswerProps> = ({
             )}
         </div>
         <div className={`${s.answerWrap} min-w-0 max-w-[calc(100%-3.5rem)]`}>
-          <div className="mb-1.5 text-xs font-medium tracking-wide text-gray-400">{t('app.chat.assistantName')}</div>
-          <div className={`${s.answer} relative text-sm text-gray-900`}>
-            <div className='py-3 px-4 bg-white border border-gray-100 rounded-2xl rounded-tl-md shadow-sm shadow-gray-200/60'>
+          <div className="mb-1.5 flex items-center gap-1.5 text-xs font-medium tracking-wide text-gray-400">
+            <span className='h-1.5 w-1.5 rounded-full bg-gradient-to-br from-indigo-500 to-violet-500 shadow-[0_0_0_3px_rgba(99,102,241,0.10)]' />
+            {t('app.chat.assistantName')}
+          </div>
+          <div className={`${s.answer} relative text-sm text-gray-800`}>
+            <div className={`${s.answerBubble} relative py-3.5 px-4 bg-gradient-to-br from-white via-white to-indigo-50/60 border border-indigo-100/70 rounded-2xl rounded-tl-md shadow-[0_14px_38px_-24px_rgba(79,70,229,0.55)]`}>
+              <div className='pointer-events-none absolute inset-x-5 top-0 h-px bg-gradient-to-r from-transparent via-indigo-200/90 to-transparent' />
               {isWaitingHumanInput && (
                 <HumanInputForm
                   data={humanInput}

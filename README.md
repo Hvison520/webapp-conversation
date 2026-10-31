@@ -2,18 +2,18 @@
 This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
 
 ## Config App
-Create a file named `.env.local` in the current directory and copy the contents from `.env.example`. Setting the following content:
+Create a file named `.env.local` in the current directory and copy the contents from `.env.example`. These values are server-only and are used by the Next.js API routes that proxy Dify requests, so they must not use the `NEXT_PUBLIC_` prefix:
 ```
-# APP ID: This is the unique identifier for your app. You can find it in the app's detail page URL. 
+# APP ID: This is the unique identifier for your app. You can find it in the app's detail page URL.
 # For example, in the URL `https://cloud.dify.ai/app/xxx/workflow`, the value `xxx` is your APP ID.
-NEXT_PUBLIC_APP_ID=
+APP_ID=
 
-# APP API Key: This is the key used to authenticate your app's API requests. 
+# APP API Key: This is the key used to authenticate your app's API requests.
 # You can generate it on the app's "API Access" page by clicking the "API Key" button in the top-right corner.
-NEXT_PUBLIC_APP_KEY=
+APP_KEY=
 
 # APP URL: This is the API's base URL. If you're using the Dify cloud service, set it to: https://api.dify.ai/v1.
-NEXT_PUBLIC_API_URL=
+API_URL=
 ```
 
 Config more in `config/index.ts` file:   

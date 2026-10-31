@@ -1,5 +1,5 @@
 import type { NextRequest } from 'next/server'
-import { API_KEY, API_URL } from '@/config'
+import { API_KEY, API_URL } from '@/config/server'
 import { getInfo, setSession } from '@/app/api/utils/common'
 
 const jsonHeaders = {

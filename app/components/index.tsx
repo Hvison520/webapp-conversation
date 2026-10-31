@@ -19,7 +19,7 @@ import useBreakpoints, { MediaType } from '@/hooks/use-breakpoints'
 import Loading from '@/app/components/base/loading'
 import { replaceVarWithValues, userInputsFormToPromptVariables } from '@/utils/prompt'
 import AppUnavailable from '@/app/components/app-unavailable'
-import { API_KEY, APP_ID, APP_INFO, isShowPrompt, promptTemplate } from '@/config'
+import { APP_INFO, APP_STORAGE_KEY, isShowPrompt, promptTemplate } from '@/config'
 import type { Annotation as AnnotationType } from '@/types/log'
 import { addFileInfos, createThinkStreamFilter, sortAgentSorts, stripThinkTags } from '@/utils/tools'
 import type { HumanInputEvent } from '@/service/base'
@@ -32,7 +32,6 @@ const Main: FC<IMainProps> = () => {
   const { t } = useTranslation()
   const media = useBreakpoints()
   const isMobile = media === MediaType.mobile
-  const hasSetAppConfig = APP_ID && API_KEY
 
   /*
   * app info
@@ -166,7 +165,7 @@ const Main: FC<IMainProps> = () => {
       setConversationIdChangeBecauseOfNew(false)
     }
     // trigger handleConversationSwitch
-    setCurrConversationId(id, APP_ID)
+    setCurrConversationId(id, APP_STORAGE_KEY)
     hideSidebar()
   }
 
@@ -226,10 +225,6 @@ const Main: FC<IMainProps> = () => {
 
   // init
   useEffect(() => {
-    if (!hasSetAppConfig) {
-      setAppUnavailable(true)
-      return
-    }
     (async () => {
       try {
         const [conversationData, appParams] = await Promise.all([fetchConversations(), fetchAppParams()])
@@ -240,7 +235,7 @@ const Main: FC<IMainProps> = () => {
           throw new Error(error)
           return
         }
-        const _conversationId = getConversationIdFromStorage(APP_ID)
+        const _conversationId = getConversationIdFromStorage(APP_STORAGE_KEY)
         const currentConversation = conversations.find(item => item.id === _conversationId)
         const isNotNewConversation = !!currentConversation
 
@@ -280,7 +275,7 @@ const Main: FC<IMainProps> = () => {
         })
         setConversationList(conversations as ConversationItem[])
 
-        if (isNotNewConversation) { setCurrConversationId(_conversationId, APP_ID, false) }
+        if (isNotNewConversation) { setCurrConversationId(_conversationId, APP_STORAGE_KEY, false) }
 
         setInited(true)
       }
@@ -479,7 +474,7 @@ const Main: FC<IMainProps> = () => {
         setConversationIdChangeBecauseOfNew(false)
         resetNewConversationInputs()
         setChatNotStarted()
-        setCurrConversationId(tempNewConversationId, APP_ID, true)
+        setCurrConversationId(tempNewConversationId, APP_STORAGE_KEY, true)
         setRespondingFalse()
       },
       onFile(file) {
@@ -749,7 +744,7 @@ const Main: FC<IMainProps> = () => {
   }
 
   const renderSidebar = () => {
-    if (!APP_ID || !APP_INFO || !promptConfig) { return null }
+    if (!APP_INFO || !promptConfig) { return null }
     return (
       <Sidebar
         list={conversationList}
@@ -760,9 +755,9 @@ const Main: FC<IMainProps> = () => {
     )
   }
 
-  if (appUnavailable) { return <AppUnavailable isUnknownReason={isUnknownReason} errMessage={!hasSetAppConfig ? '请在 .env.local 或 config/index.ts 中配置 APP_ID 与 API_KEY' : ''} /> }
+  if (appUnavailable) { return <AppUnavailable isUnknownReason={isUnknownReason} errMessage='服务暂不可用，请检查服务端环境变量 APP_ID / APP_KEY / API_URL' /> }
 
-  if (!APP_ID || !APP_INFO || !promptConfig) { return <Loading type='app' /> }
+  if (!APP_INFO || !promptConfig) { return <Loading type='app' /> }
 
   return (
     <div className='min-h-screen bg-gradient-to-br from-indigo-50 via-white to-violet-50'>

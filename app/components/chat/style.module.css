@@ -20,13 +20,6 @@
   border-radius: 999px;
 }
 
-.questionIcon {
-  background: url(./icons/user-avatar.svg) center center no-repeat;
-  background-size: contain;
-  border-radius: 50%;
-  box-shadow: 0 8px 20px -8px rgba(249, 115, 22, 0.6);
-}
-
 .questionBubble :global(.streamdown-markdown),
 .questionBubble :global(.streamdown-markdown p),
 .questionBubble :global(.streamdown-markdown li),
@@ -55,6 +48,28 @@
 
 .questionBubble :global(.streamdown-markdown pre) {
   background: rgba(15, 23, 42, 0.35);
+}
+
+.answerBubble :global(.streamdown-markdown) {
+  line-height: 1.75;
+}
+
+.answerBubble :global(.streamdown-markdown p) {
+  margin: 0.25rem 0;
+}
+
+.answerBubble :global(.streamdown-markdown p:first-child) {
+  margin-top: 0;
+}
+
+.answerBubble :global(.streamdown-markdown p:last-child) {
+  margin-bottom: 0;
+}
+
+.answerBubble :global(.streamdown-markdown ul),
+.answerBubble :global(.streamdown-markdown ol) {
+  margin: 0.35rem 0;
+  padding-left: 1.25rem;
 }
 
 .answerWrap .itemOperation {
